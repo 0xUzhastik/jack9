@@ -1,0 +1,1 @@
+export const jackpotAddr = '4nxd9dc9DVTQt2rWwdsBmE9RNYgdViTMM6qN8Ei1pnGS';

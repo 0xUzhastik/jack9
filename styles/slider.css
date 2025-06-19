@@ -1,0 +1,120 @@
+/* FIXED SLIDER STYLES - Complete redesign */
+.casino-slider {
+  /* Remove default styling */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* WebKit (Chrome, Safari, Edge) thumb styling */
+.casino-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #fbbf24, #f59e0b);
+  border: 2px solid #ffffff;
+  cursor: pointer;
+  box-shadow: 
+    0 0 0 1px #000000,
+    0 2px 4px rgba(0, 0, 0, 0.4), 
+    0 0 8px rgba(255, 215, 0, 0.6);
+  transition: all 0.15s ease;
+  /* Ensure thumb appears above everything */
+  position: relative;
+  z-index: 1000;
+}
+
+.casino-slider::-webkit-slider-thumb:hover {
+  background: linear-gradient(45deg, #f59e0b, #fbbf24);
+  transform: scale(1.15);
+  box-shadow: 
+    0 0 0 1px #000000,
+    0 4px 8px rgba(0, 0, 0, 0.5), 
+    0 0 12px rgba(255, 215, 0, 0.8);
+}
+
+.casino-slider::-webkit-slider-thumb:active {
+  transform: scale(1.05);
+  box-shadow: 
+    0 0 0 1px #000000,
+    0 2px 6px rgba(0, 0, 0, 0.4), 
+    0 0 10px rgba(255, 215, 0, 0.7);
+}
+
+/* WebKit track styling */
+.casino-slider::-webkit-slider-track {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 20px; /* Full height to capture clicks */
+  border: none;
+  outline: none;
+}
+
+/* Firefox thumb styling */
+.casino-slider::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #fbbf24, #f59e0b);
+  border: 2px solid #ffffff;
+  cursor: pointer;
+  box-shadow: 
+    0 0 0 1px #000000,
+    0 2px 4px rgba(0, 0, 0, 0.4), 
+    0 0 8px rgba(255, 215, 0, 0.6);
+  /* Remove default Firefox styling */
+  -moz-appearance: none;
+  border-radius: 50%;
+}
+
+.casino-slider::-moz-range-thumb:hover {
+  background: linear-gradient(45deg, #f59e0b, #fbbf24);
+  transform: scale(1.15);
+}
+
+/* Firefox track styling */
+.casino-slider::-moz-range-track {
+  background: transparent;
+  height: 20px;
+  border: none;
+  border-radius: 0;
+}
+
+/* Focus styles */
+.casino-slider:focus {
+  outline: none;
+}
+
+.casino-slider:focus::-webkit-slider-thumb {
+  box-shadow: 
+    0 0 0 1px #000000,
+    0 2px 4px rgba(0, 0, 0, 0.4), 
+    0 0 8px rgba(255, 215, 0, 0.6),
+    0 0 0 2px rgba(255, 215, 0, 0.3);
+}
+
+.casino-slider:focus::-moz-range-thumb {
+  box-shadow: 
+    0 0 0 1px #000000,
+    0 2px 4px rgba(0, 0, 0, 0.4), 
+    0 0 8px rgba(255, 215, 0, 0.6),
+    0 0 0 2px rgba(255, 215, 0, 0.3);
+}
+
+/* Custom input number styling to match casino theme */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
