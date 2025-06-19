@@ -6,7 +6,6 @@ import { useEffect, useRef, useState, memo, useMemo, useCallback } from 'react';
 import { 
   TokenRow, 
   percentageToTokenCount, 
-  formatCurrencyValue 
 } from '@/lib/tokenUtils';
 import { 
   getTokenDisplayValues,

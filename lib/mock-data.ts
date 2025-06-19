@@ -37,14 +37,19 @@ export const pastDraws: PastDraw[] = [
   { id: '3', name: 'Orion', amount: 1088.5 },
 ];
 
+const solPrice = 170
+const getAmountUSD = (amount: number) => {
+  return amount * solPrice;
+}
+
 export const currentDeposits: Deposit[] = [
-  { id: '1', user: 'SolanaBull', token: 'SOL', amount: 250.5, color: 'hsl(var(--chart-1))', timestamp: new Date(Date.now() - 1800000) },
-  { id: '2', user: 'Luna', token: 'RAY', amount: 320.8, color: 'hsl(var(--chart-2))', timestamp: new Date(Date.now() - 2700000) },
-  { id: '3', user: 'Nebula', token: 'BONK', amount: 178.2, color: 'hsl(var(--chart-3))', timestamp: new Date(Date.now() - 1200000) },
-  { id: '4', user: 'Eclipse', token: 'USDC', amount: 217.9, color: 'hsl(var(--chart-4))', timestamp: new Date(Date.now() - 900000) },
-  { id: '5', user: 'Comet', token: 'WIF', amount: 145.3, color: 'hsl(var(--chart-1))', timestamp: new Date(Date.now() - 600000) },
-  { id: '6', user: 'Meteor', token: 'SWIF', amount: 198.7, color: 'hsl(var(--chart-2))', timestamp: new Date(Date.now() - 300000) },
-  { id: '7', user: 'Galaxy', token: 'JUP', amount: 263.4, color: 'hsl(var(--chart-3))', timestamp: new Date(Date.now() - 120000) },
+  { id: '1', user: 'SolanaBull', token: 'SOL', amount: 250.5, amountUSD: getAmountUSD(250.5), color: 'hsl(var(--chart-1))', timestamp: new Date(Date.now() - 1800000) },
+  { id: '2', user: 'Luna', token: 'RAY', amount: 320.8, amountUSD: getAmountUSD(320.8), color: 'hsl(var(--chart-2))', timestamp: new Date(Date.now() - 2700000) },
+  { id: '3', user: 'Nebula', token: 'BONK', amount: 178.2, amountUSD: getAmountUSD(178.2), color: 'hsl(var(--chart-3))', timestamp: new Date(Date.now() - 1200000) },
+  { id: '4', user: 'Eclipse', token: 'USDC', amount: 217.9, amountUSD: getAmountUSD(217.9), color: 'hsl(var(--chart-4))', timestamp: new Date(Date.now() - 900000) },
+  { id: '5', user: 'Comet', token: 'WIF', amount: 145.3, amountUSD: getAmountUSD(145.3), color: 'hsl(var(--chart-1))', timestamp: new Date(Date.now() - 600000) },
+  { id: '6', user: 'Meteor', token: 'SWIF', amount: 198.7, amountUSD: getAmountUSD(198.7), color: 'hsl(var(--chart-2))', timestamp: new Date(Date.now() - 300000) },
+  { id: '7', user: 'Galaxy', token: 'JUP', amount: 263.4, amountUSD: getAmountUSD(263.4), color: 'hsl(var(--chart-3))', timestamp: new Date(Date.now() - 120000) },
 ];
 
 export const chatMessages = mockMessages;

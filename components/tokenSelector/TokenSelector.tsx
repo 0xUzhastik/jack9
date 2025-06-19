@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LayoutGroup, AnimatePresence } from "framer-motion";
+import { LayoutGroup, AnimatePresence, motion } from "framer-motion";
 import { Wallet, Coins } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSolPriceUSD } from "@/hooks/useSolPriceUSD";

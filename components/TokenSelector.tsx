@@ -106,7 +106,9 @@ function MobileTokenRow({
 
   // 🔥 UNIFIED: Calculate max USD value using shared utility
   const maxUSDValue = useMemo(() => {
-    return calculateMaxUSDValue(token, tokenPriceInSol, solPrice);
+    const safeSolPrice: number | null = (typeof solPrice === 'number') ? solPrice : null;
+    const safeTokenPriceInSol: number | null = (typeof tokenPriceInSol === 'number') ? tokenPriceInSol : null;
+    return calculateMaxUSDValue(token, safeTokenPriceInSol, safeSolPrice);
   }, [token, tokenPriceInSol, solPrice]);
 
   useEffect(() => {
@@ -729,7 +731,7 @@ export function TokenSelector({
     updateTokenAmount
   } = useTokenStore();
 
-  // 🔥 UNIFIED: Add price hooks for USD values
+  // �� UNIFIED: Add price hooks for USD values
   const { price: solPrice } = useSolPriceUSD();
 
   // 🔥 UNIFIED: Calculate USD values for each token using shared utility

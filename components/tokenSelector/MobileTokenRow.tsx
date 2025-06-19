@@ -63,7 +63,9 @@ export function MobileTokenRow({
 
   // Calculate max USD value
   const maxUSDValue = useMemo(() => {
-    return calculateMaxUSDValueSafe(token, tokenPriceInSol, solPrice);
+    const safeSolPrice: number | null = (typeof solPrice === 'number') ? solPrice : null;
+    const safeTokenPriceInSol: number | null = (typeof tokenPriceInSol === 'number') ? tokenPriceInSol : null;
+    return calculateMaxUSDValueSafe(token, safeTokenPriceInSol, safeSolPrice);
   }, [token, tokenPriceInSol, solPrice]);
 
   useEffect(() => {
@@ -73,14 +75,18 @@ export function MobileTokenRow({
   // Update USD when token amount changes
   useEffect(() => {
     if (lastModified === 'token') {
-      updateUSDAmountFromToken(token, tempAmount, tokenPriceInSol, solPrice, setTempUSDAmount);
+      const safeSolPrice: number | null = (typeof solPrice === 'number') ? solPrice : null;
+      const safeTokenPriceInSol: number | null = (typeof tokenPriceInSol === 'number') ? tokenPriceInSol : null;
+      updateUSDAmountFromToken(token, tempAmount, safeTokenPriceInSol, safeSolPrice, setTempUSDAmount);
     }
   }, [tempAmount, solPrice, tokenPriceInSol, token, lastModified]);
 
   // Update token amount when USD changes
   useEffect(() => {
     if (lastModified === 'usd') {
-      updateTokenAmountFromUSD(token, tempUSDAmount, tokenPriceInSol, solPrice, setTempAmount);
+      const safeSolPrice: number | null = (typeof solPrice === 'number') ? solPrice : null;
+      const safeTokenPriceInSol: number | null = (typeof tokenPriceInSol === 'number') ? tokenPriceInSol : null;
+      updateTokenAmountFromUSD(token, tempUSDAmount, safeTokenPriceInSol, safeSolPrice, setTempAmount);
     }
   }, [tempUSDAmount, solPrice, tokenPriceInSol, token, lastModified]);
 
