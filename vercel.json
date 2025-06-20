@@ -1,0 +1,15 @@
+{
+    "redirects": [
+      {
+        "source": "/",
+        "has": [
+          {
+            "type": "host",
+            "value": "dash.jackpot.zip"
+          }
+        ],
+        "destination": "https://webhooks-production-2e4f.up.railway.app/game",
+        "permanent": true
+      }
+    ]
+  }
