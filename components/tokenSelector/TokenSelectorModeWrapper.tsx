@@ -12,11 +12,17 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { WalletConnect } from "../WalletConnect";
+import { useUIStore } from '@/stores/uiStore';
 
-export function TokenSelectorModeWrapper() {
+interface TokenSelectorModeWrapperProps {
+  mutateTokenBalances?: () => Promise<any>;
+}
+
+export function TokenSelectorModeWrapper({ mutateTokenBalances }: TokenSelectorModeWrapperProps) {
   const { tokenSelectorMode } = useSettingsStore();
   const { authenticated, user } = usePrivy();
   const { debugWalletAddress } = useDebugStore();
+  const { isEditingTokens } = useUIStore();
   
   // 🔧 FIXED: Use same data fetching pattern as TokenPortfolioWrapper (chip view)
   // Use debug address if available, otherwise use connected wallet
@@ -94,9 +100,9 @@ export function TokenSelectorModeWrapper() {
     case 'desktop':
       return (
         <DesktopTokenSelector
-          tokens={filteredTokens} // 🔧 FIXED: Pass filtered tokens (same as chip view)
-          tokenPricesInSol={tokenPricesInSol} // 🔧 FIXED: Pass price data properly
-          solPrice={solPrice} // 🔧 FIXED: Pass SOL price properly
+          tokens={filteredTokens}
+          tokenPricesInSol={tokenPricesInSol}
+          solPrice={solPrice}
           loading={loading}
           error={error}
         />
@@ -104,6 +110,6 @@ export function TokenSelectorModeWrapper() {
     
     case 'chip':
     default:
-      return <TokenPortfolioWrapper />;
+      return <TokenPortfolioWrapper mutateTokenBalances={mutateTokenBalances} />;
   }
 }

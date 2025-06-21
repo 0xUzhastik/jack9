@@ -166,7 +166,7 @@ export function CurrentDeposits({ isMobile = false }: CurrentDepositsProps) {
                           <div className="col-span-3 text-center">
                             <span className="font-bold casino-text-yellow text-sm"
                               style={{ fontFamily: "Visby Round CF, SF Pro Display, sans-serif" }}>
-                              {deposit.token}
+                              {('tokens' in deposit && (deposit as any).tokens) ? (deposit as any).tokens.join(', ') : deposit.token}
                             </span>
                           </div>
                           
@@ -375,7 +375,7 @@ export function CurrentDeposits({ isMobile = false }: CurrentDepositsProps) {
                           <div className="col-span-3 text-center">
                             <span className="font-bold casino-text-yellow text-xs"
                               style={{ fontFamily: "Visby Round CF, SF Pro Display, sans-serif" }}>
-                              {deposit.token}
+                              {('tokens' in deposit && (deposit as any).tokens) ? (deposit as any).tokens.join(', ') : deposit.token}
                             </span>
                           </div>
                           

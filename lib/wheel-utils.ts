@@ -5,8 +5,10 @@
 export interface Deposit {
   id: string;
   user: string;
-  token: string;
+  token?: string;
+  tokens?: string[];
   amount: number;
+  amountUSD: number;
   timestamp: Date;
 }
 
@@ -71,7 +73,7 @@ export function calculateDepositAngle(
   targetDeposit: Deposit, 
   totalAmount: number
 ): { startAngle: number; endAngle: number; sliceAngle: number } {
-  const remainingCap = Math.max(2000 - totalAmount, 0);
+  const remainingCap = Math.max(200 - totalAmount, 0);
   // 🔥 KEEP CHRONOLOGICAL ORDER - no sorting!
   const chronological = [...deposits];
   
@@ -179,7 +181,7 @@ export function generateChartData(
   deposits: Deposit[],
   totalAmount: number
 ): ChartSlice[] {
-  const remainingCap = Math.max(2000 - totalAmount, 0);
+  const remainingCap = Math.max(200 - totalAmount, 0);
   const bgColor = '#1A0B2E';
 
   // 🔥 CRITICAL: Keep deposits in chronological order - NO SORTING!
@@ -197,7 +199,7 @@ export function generateChartData(
     // 🎰 STABLE COLOR ASSIGNMENT: Each deposit gets color based on its chronological index
     ...chronological.map((d, index) => ({
       key: d.id, // Use deposit ID as stable key
-      value: d.amount,
+      value: d.amountUSD, // Use USD value for the slice
       color: getStableColorForDeposit(index), // 🔥 FIXED: Stable color based on order
       deposit: d,
     }))

@@ -50,12 +50,15 @@ export const useTokenStore = create<TokenStore>()(
       
       // Token selection actions
       addToken: (token) => {
-        set((state) => ({
-          selectedTokens: [
-            ...state.selectedTokens,
-            { ...token, selected: true, selectedAmount: token.amount * 0.5 }
-          ]
-        }), false, 'addToken');
+        set((state) => {
+          const exists = state.selectedTokens.some(t => t.mint === token.mint);
+          const updatedToken = { ...token, selected: true };
+          return {
+            selectedTokens: exists
+              ? state.selectedTokens.map(t => t.mint === token.mint ? updatedToken : t)
+              : [...state.selectedTokens, updatedToken]
+          };
+        }, false, 'addToken');
       },
       
       removeToken: (mint) => {

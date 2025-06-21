@@ -12,11 +12,12 @@ import {
   formatCurrencyValue as formatCurrency
 } from '@/lib/priceCalculations';
 import { useViewportHeight } from '@/hooks/useViewportHeight'; // 🔥 NEW: Import viewport height hook
+import { useUIStore } from '@/stores/uiStore';
 
 interface TokenPortfolioViewProps {
   stackValues: number[];
-  sliderValues: number[]; // Now represents percentages (0-100)
-  onSliderChange: (index: number, percentage: number) => void; // Now takes percentage
+  sliderValues: number[];
+  onSliderChange: (index: number, percentage: number) => void;
   filteredTokens?: TokenRow[];
   totalColumns: number;
   getTokenImage: (index: number) => string;
@@ -30,7 +31,7 @@ interface TokenPortfolioViewProps {
 // 🔥 MEMOIZED: Component to prevent unnecessary re-renders
 const TokenPortfolioView = memo(function TokenPortfolioView({
   stackValues,
-  sliderValues, // Now percentages 0-100
+  sliderValues,
   onSliderChange,
   filteredTokens,
   totalColumns,
@@ -39,7 +40,7 @@ const TokenPortfolioView = memo(function TokenPortfolioView({
   getRawTokenAmount,
   getColumnForToken,
   tokenPricesInSol,
-  solPrice
+  solPrice,
 }: TokenPortfolioViewProps) {
 
   const containerRef = useRef<HTMLDivElement>(null);
