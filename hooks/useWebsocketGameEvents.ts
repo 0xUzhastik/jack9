@@ -3,11 +3,10 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useGameStore } from '@/stores/gameStore';
+import { socketBus } from '@/lib/socketBus';
 import { toast } from '@/hooks/use-toast';
 import { Deposit } from '@/lib/types'; // Assuming you have this type
 import { useSolPriceUSD } from './useSolPriceUSD';
-
-const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://webhooks-production-2e4f.up.railway.app/ws';
 
 // Define the shape of the incoming WebSocket data based on your examples
 interface GameUpdateData {
@@ -51,53 +50,7 @@ export function useWebSocketGameEvents() {
         solPriceRef.current = solPrice;
     }, [solPrice]);
 
-    const ws = useRef<WebSocket | null>(null);
-
     const hasLoadedInitialRound = useRef(false);
-
-    const connect = () => {
-        console.log('[ws]Connecting to WebSocket...', WEBSOCKET_URL);
-        ws.current = new WebSocket(WEBSOCKET_URL);
-
-        ws.current.onopen = () => {
-            console.log('🔗 WebSocket connected');
-            toast({ title: 'Connected to Live Game', duration: 2000 });
-        };
-
-        ws.current.onmessage = (event) => {
-            console.log('[ws] Received message:', event.data);
-            try {
-                const message = JSON.parse(event.data);
-                
-                switch (message.event) {
-                    case 'game_updated':
-                        handleGameUpdated(message.data as GameUpdateData);
-                        break;
-                    case 'game_started':
-                        handleGameStarted(message.data as GameStartedData);
-                        break;
-                    case 'game_closed':
-                        handleGameClosed(message.data as GameClosedData);
-                        break;
-                    default:
-                        // console.log('Received unknown event:', message.event);
-                        break;
-                }
-            } catch (error) {
-                console.error('Failed to parse WebSocket message:', error);
-            }
-        };
-
-        ws.current.onclose = () => {
-            console.log('🔌 WebSocket disconnected. Reconnecting in 3 seconds...');
-            setTimeout(connect, 3000); // Simple auto-reconnect
-        };
-
-        ws.current.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            ws.current?.close(); // This will trigger the onclose handler for reconnection
-        };
-    };
 
     console.log('[ws] solPrice:', solPrice);
 
@@ -184,10 +137,14 @@ export function useWebSocketGameEvents() {
     };
 
     useEffect(() => {
-        connect();
+        socketBus.on("game_updated", handleGameUpdated);
+        socketBus.on("game_started", handleGameStarted);
+        socketBus.on("game_closed", handleGameClosed);
+
         return () => {
-            ws.current?.close();
+            socketBus.off("game_updated", handleGameUpdated);
+            socketBus.off("game_started", handleGameStarted);
+            socketBus.off("game_closed", handleGameClosed);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [handleGameUpdated, handleGameStarted, handleGameClosed]);
 }

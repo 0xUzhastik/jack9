@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
-import { userGifs } from "@/lib/mock-data";
+import { useWebSocketChat } from "@/hooks/useWsChat";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { parseMessageWithEmojis, getEmojiCodeByUrl } from "@/lib/emoji-map";
 import { ArrowRightIcon, Star } from "lucide-react";
@@ -18,24 +18,20 @@ interface ChatSectionProps {
   isMobile?: boolean;
 }
 
-const mockResponses = [
-  "LFG! 🚀",
-  "To the moon!",
-  "gm",
-  "This pot is getting huge",
-  "I'm feeling lucky",
-  "Another deposit incoming",
-  "Can't wait for the draw",
-  "Who's winning this one?",
-  "Best lottery ever",
-  "Love this community"
-];
+// Helper function to format wallet address
+const formatWalletAddress = (address: string) => {
+  if (address && address.length > 20) {
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  }
+  return address;
+};
 
 export function ChatSection({ isMobile = false }: ChatSectionProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { authenticated } = usePrivy();
+  const { authenticated, user } = usePrivy();
+
+  const { send } = useWebSocketChat();
   
-  // Zustand stores
   const {
     messages,
     newMessage,
@@ -56,28 +52,6 @@ export function ChatSection({ isMobile = false }: ChatSectionProps) {
   };
 
   useEffect(() => {
-    const users = Object.keys(userGifs);
-    const interval = setInterval(() => {
-      const randomUser = users[Math.floor(Math.random() * users.length)];
-      const randomMessage = mockResponses[Math.floor(Math.random() * mockResponses.length)];
-      const randomGif = userGifs[randomUser][Math.floor(Math.random() * userGifs[randomUser].length)];
-      
-      const newMsg = {
-        id: Date.now().toString(),
-        user: randomUser,
-        message: randomMessage,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        gif: randomGif
-      };
-
-      addMessage(newMsg);
-      setTimeout(scrollToBottom, 100);
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [addMessage]);
-
-  useEffect(() => {
     scrollToBottom();
   }, []);
 
@@ -86,16 +60,20 @@ export function ChatSection({ isMobile = false }: ChatSectionProps) {
     if (!newMessage.trim()) return;
     
     const messageSegments = parseMessageWithEmojis(newMessage);
+    const displayName = user?.wallet?.address ? formatWalletAddress(user.wallet.address) : "You";
     
     const userMessage = {
       id: Date.now().toString(),
-      user: "You",
+      user: displayName,
       message: newMessage,
       messageSegments,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     
     addMessage(userMessage);
+
+    if (authenticated) send(newMessage);
+    
     clearNewMessage();
     setIsEmojiPickerOpen(false);
     setTimeout(scrollToBottom, 100);
@@ -105,11 +83,9 @@ export function ChatSection({ isMobile = false }: ChatSectionProps) {
     setNewMessage(newMessage + emoji);
   };
 
-  // Mobile layout - no background (uses parent's unified background)
   if (isMobile) {
     return (
       <div className="h-full flex flex-col">
-        {/* Messages Area - No background, inherits from parent */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           <ScrollArea 
             className="rounded-lg p-1 min-w-0 h-full" 
@@ -124,7 +100,6 @@ export function ChatSection({ isMobile = false }: ChatSectionProps) {
                   transition={{ delay: index * 0.05 }}
                   className="relative min-w-0"
                 >
-                  {/* Clean message styling with minimal padding */}
                   <div className="text-white min-w-0 overflow-hidden px-2 py-1 mb-1">
                     <span className="font-black casino-text-yellow text-sm" style={{ fontFamily: "Visby Round CF, SF Pro Display, sans-serif" }}>{message.user}: </span>
                     {message.messageSegments ? (
@@ -163,11 +138,9 @@ export function ChatSection({ isMobile = false }: ChatSectionProps) {
           </ScrollArea>
         </div>
         
-        {/* Input Footer - Reduced bottom padding */}
-        {authenticated && (
+        {authenticated ? (
           <div className="flex-shrink-0 p-2 pb-8 border-t border-[#FFD700]/40 min-w-0 relative">
             <form onSubmit={handleSend} className="w-full flex items-center gap-2 min-w-0 relative">
-              {/* Emoji Picker Button and Floating Picker */}
               <div className="flex-shrink-0 relative">
                 <EmojiPicker 
                   onEmojiSelect={handleEmojiSelect} 
@@ -194,15 +167,17 @@ export function ChatSection({ isMobile = false }: ChatSectionProps) {
               </div>
             </form>
           </div>
+        ) : (
+          <div className="p-4 text-center text-sm text-slate-400">
+            Please&nbsp;<WalletConnect />&nbsp;to chat.
+          </div>
         )}
       </div>
     );
   }
 
-  // Desktop layout - keep card wrapper
   return (
     <Card className="casino-box casino-box-gold overflow-hidden p-0 h-full flex flex-col relative">
-      {/* Corner stars */}
       <div className="absolute top-2 left-2 z-10">
         <Star className="h-4 w-4 casino-star" fill="currentColor" />
       </div>
@@ -210,15 +185,12 @@ export function ChatSection({ isMobile = false }: ChatSectionProps) {
         <Star className="h-4 w-4 casino-star" fill="currentColor" />
       </div>
       
-      {/* Chat Content - Flex container that fills available space */}
       <CardContent className="p-4 h-full flex flex-col min-w-0 overflow-hidden">
-        {/* Title */}
         <h2 className="text-xl font-black uppercase text-center tracking-wide mb-4 casino-text-gold flex-shrink-0" 
             style={{ fontFamily: "Visby Round CF, SF Pro Display, sans-serif" }}>
           Chat
         </h2>
         
-        {/* Messages Area - Takes all available space and scrolls */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           <ScrollArea 
             className="rounded-lg p-3 min-w-0" 
@@ -272,11 +244,9 @@ export function ChatSection({ isMobile = false }: ChatSectionProps) {
         </div>
       </CardContent>
       
-      {/* Input Footer - Pinned to bottom */}
       <CardFooter className="flex-shrink-0 p-3 border-t border-[#FFD700] min-w-0 relative">
         {authenticated ? (
           <form onSubmit={handleSend} className="w-full flex items-center gap-2 min-w-0 relative">
-            {/* Emoji Picker Button and Floating Picker */}
             <div className="flex-shrink-0 relative">
               <EmojiPicker 
                 onEmojiSelect={handleEmojiSelect} 
@@ -285,7 +255,6 @@ export function ChatSection({ isMobile = false }: ChatSectionProps) {
               />
               {isEmojiPickerOpen && (
                 <div className="absolute bottom-full left-0 mb-2 z-50">
-                  {/* The EmojiPicker dropdown content should be rendered here if possible */}
                 </div>
               )}
             </div>
