@@ -22,7 +22,6 @@ export function TokenSelectorModeWrapper({ mutateTokenBalances }: TokenSelectorM
   const { tokenSelectorMode } = useSettingsStore();
   const { authenticated, user } = usePrivy();
   const { debugWalletAddress } = useDebugStore();
-  const { isEditingTokens } = useUIStore();
   
   // 🔧 FIXED: Use same data fetching pattern as TokenPortfolioWrapper (chip view)
   // Use debug address if available, otherwise use connected wallet

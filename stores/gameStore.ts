@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-interface Deposit {
+export interface Deposit {
   id: string;
   user: string;
   token: string;

@@ -72,7 +72,7 @@ export function DesktopTokenSelector({
   const { showAdvancedControls, autoSelectOptimalAmounts } =
     useSettingsStore();
 
-  const { setInputFocus, focusedInputs, isEditingTokens: uiIsEditingTokens } = useUIStore();
+  const { setInputFocus, focusedInputs } = useUIStore();
 
   const { ready, authenticated, user } = usePrivy();
   const { toast } = useToast();
