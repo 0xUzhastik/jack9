@@ -7,7 +7,8 @@ export interface PastDraw {
 export interface Deposit {
   id: string;
   user: string;
-  token: string;
+  token?: string;
+  tokens?: string[];
   amount: number;
   amountUSD: number;
   color: string;

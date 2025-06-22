@@ -9,9 +9,11 @@ import { useAudioStore } from '@/stores/audioStore';
 import { useGameStore } from '@/stores/gameStore';
 import { jackpotAddr } from '@/lib/constants';
 import { triggerJackpotConfetti } from '@/lib/confetti';
-import { generateSpinningAngle, generateChartData } from '@/lib/wheel-utils';
+import { generateSpinningAngle, generateChartData, Deposit } from '@/lib/wheel-utils';
 import { SpinningWheel } from './SpinningWheel';
 import { RoundStateDisplay } from './RoundStateDisplay';
+import { useWebSocketGameEvents } from '@/hooks/useWebsocketGameEvents';
+import type { RoundState } from '@/stores/gameStore';
 
 // Add TypeScript declaration for window.solana
 declare global {
@@ -27,6 +29,8 @@ declare global {
 /*                               MAIN COMPONENT                               */
 /* -------------------------------------------------------------------------- */
 export default function JackpotDonutChart() {
+  useWebSocketGameEvents();
+
   /* -------------------------------- context ------------------------------ */
   const connection = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC!);
   const { authenticated, user } = usePrivy();
@@ -168,47 +172,59 @@ export default function JackpotDonutChart() {
     return () => clearInterval(interval);
   }, [roundState, seconds, newRoundCountdown, setRoundState, setSeconds, setNewRoundCountdown]);
 
+  // Move proceedToSpin outside useEffect
+  function proceedToSpin(
+    deposits: Deposit[],
+    totalAmount: number,
+    startSpinning: (angle: number, winner: Deposit) => void,
+    stopSpinning: () => void,
+    setWinner: (winner: string, amount?: number) => void,
+    playSound: (sound: 'deposit' | 'userDeposit' | 'win') => void,
+    triggerJackpotConfetti: () => void,
+    toast: (args: { title: string; description: string; duration: number }) => void,
+    setRoundState: (state: RoundState) => void
+  ) {
+    const randomWinner = deposits[Math.floor(Math.random() * deposits.length)];
+    // Start spinning animation
+    const dramaticSpinAngle = generateSpinningAngle(deposits, randomWinner, 200); // Use 200 so remainingCap=0
+    startSpinning(dramaticSpinAngle, randomWinner);
+    setTimeout(() => {
+      stopSpinning();
+      setWinner(randomWinner.user, totalAmount);
+      playSound('win');
+      triggerJackpotConfetti();
+      toast({
+        title: '🎉 JACKPOT WINNER! 🎉',
+        description: `${randomWinner.user} won $${totalAmount.toFixed(0)}!`,
+        duration: 5000,
+      });
+      setRoundState('ended');
+    }, 7000);
+  }
+
   // Handle round ending sequence
   useEffect(() => {
     if (roundState === 'ending') {
-      // 🔥 CRITICAL: Stop all animations during round end
       setIsAnimating(true);
 
       if (deposits.length === 0) {
-        // No deposits, skip spinning
         setRoundState('ended');
         return;
       }
 
-      // Select winner immediately
-      const randomWinner = deposits[Math.floor(Math.random() * deposits.length)];
-
-      // Small delay before starting the spin
-      setTimeout(() => {
-        // Start spinning animation
-        const dramaticSpinAngle = generateSpinningAngle(deposits, randomWinner, totalAmount);
-        startSpinning(dramaticSpinAngle, randomWinner);
-      }, 500);
-      
-      // After spinning animation completes, reveal winner
-      setTimeout(() => {
-        stopSpinning();
-        setWinner(randomWinner.user, totalAmount);
-        
-        // 🎵 PLAY WIN SOUND
-        playSound('win');
-        
-        // 🎉 TRIGGER CONFETTI CELEBRATION! 🎉
-        triggerJackpotConfetti();
-        
-        toast({
-          title: '🎉 JACKPOT WINNER! 🎉',
-          description: `${randomWinner.user} won $${totalAmount.toFixed(0)}!`,
-          duration: 5000,
-        });
-        
-        setRoundState('ended');
-      }, 7000); // 6.5s spinning + 0.5s buffer
+      const calculatedTotal = deposits.reduce((sum, d) => sum + d.amountUSD, 0);
+      const remainingCap = Math.max(200 - calculatedTotal, 0);
+      if (remainingCap > 0) {
+        setTimeout(() => {
+          setForceFullDonut(true);
+          setTimeout(() => {
+            setForceFullDonut(false);
+            proceedToSpin(deposits, totalAmount, startSpinning, stopSpinning, setWinner, playSound, triggerJackpotConfetti, toast, setRoundState);
+          }, 400);
+        }, 100);
+      } else {
+        proceedToSpin(deposits, totalAmount, startSpinning, stopSpinning, setWinner, playSound, triggerJackpotConfetti, toast, setRoundState);
+      }
     }
   }, [roundState, deposits, totalAmount, startSpinning, stopSpinning, setWinner, setRoundState, playSound]);
 
@@ -235,12 +251,12 @@ export default function JackpotDonutChart() {
   };
 
   /* ------------------------------ chart data ----------------------------- */
-  // 🔥 THE REAL FIX: Calculate totalAmount INSIDE useMemo to avoid external dependency
+  // Add forceFullDonut state and update chartData useMemo
+  const [forceFullDonut, setForceFullDonut] = useState(false);
   const chartData = useMemo(() => {
-    // Calculate total inside useMemo to avoid dependency issues
     const calculatedTotal = deposits.reduce((sum, deposit) => sum + deposit.amountUSD, 0);
-    return generateChartData(deposits, calculatedTotal);
-  }, [deposits]); // 🔥 ONLY depend on deposits array, not external totalAmount!
+    return generateChartData(deposits, forceFullDonut ? 200 : calculatedTotal);
+  }, [deposits, forceFullDonut]);
 
   /* --------------------------------- UI ---------------------------------- */
   return (

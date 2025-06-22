@@ -53,6 +53,8 @@ export function useWebSocketGameEvents() {
 
     const ws = useRef<WebSocket | null>(null);
 
+    const hasLoadedInitialRound = useRef(false);
+
     const connect = () => {
         console.log('[ws]Connecting to WebSocket...', WEBSOCKET_URL);
         ws.current = new WebSocket(WEBSOCKET_URL);
@@ -109,26 +111,47 @@ export function useWebSocketGameEvents() {
         console.log('[ws] handleGameUpdated:', {data});
         const tokenPrices = data.tokenPricesSol || {};
 
-        console.log('[ws] tokenPrices:', tokenPrices, currentSolPrice);
-        const newDeposits: Deposit[] = data.deposits.map((d: any, index: number) => ({
-            id: d.signature || d._id || `deposit-${index}`,
-            user: `${d.from.slice(0, 4)}...${d.from.slice(-4)}`,
-            token: d.metadata?.symbol || '',
-            amount: d.tokenAmount * (tokenPrices[d.tokenMint] || 0), // Convert to SOL
-            amountUSD: d.tokenAmount * (tokenPrices[d.tokenMint] || 0) * currentSolPrice,
-            timestamp: new Date(d.receivedAt),
-            color: ''
-        }));
-
-        console.log('[ws] newDeposits:', newDeposits);
-
-        setDeposits(newDeposits);
-
-        // Calculate countdown
-        const raffleTime = new Date(data.estimatedRaffleAt).getTime();
-        const now = Date.now();
-        const secondsLeft = Math.max(0, Math.floor((raffleTime - now) / 1000));
-        setSeconds(secondsLeft);
+        // Aggregate deposits by signature+user
+        const depositMap = new Map();
+        for (const d of data.deposits) {
+            const key = `${d.signature || d._id || ''}_${d.from}`;
+            const tokenSymbol = d.metadata?.symbol || '';
+            const tokenAmount = d.tokenAmount * (tokenPrices[d.tokenMint] || 0);
+            const tokenAmountUSD = d.tokenAmount * (tokenPrices[d.tokenMint] || 0) * currentSolPrice;
+            if (depositMap.has(key)) {
+                const dep = depositMap.get(key);
+                dep.tokens.push(tokenSymbol);
+                dep.amount += tokenAmount;
+                dep.amountUSD += tokenAmountUSD;
+            } else {
+                depositMap.set(key, {
+                    id: d.signature || d._id || key,
+                    user: `${d.from.slice(0, 4)}...${d.from.slice(-4)}`,
+                    tokens: [tokenSymbol],
+                    amount: tokenAmount,
+                    amountUSD: tokenAmountUSD,
+                    timestamp: new Date(d.receivedAt),
+                    color: '',
+                });
+            }
+        }
+        const newDeposits = Array.from(depositMap.values());
+        if (!hasLoadedInitialRound.current) {
+            setDeposits(newDeposits);
+            // Calculate countdown
+            const raffleTime = new Date(data.estimatedRaffleAt).getTime();
+            const now = Date.now();
+            const secondsLeft = Math.max(0, Math.floor((raffleTime - now) / 1000));
+            setSeconds(secondsLeft);
+            hasLoadedInitialRound.current = true;
+        } else {
+            setDeposits(newDeposits);
+            // Calculate countdown
+            const raffleTime = new Date(data.estimatedRaffleAt).getTime();
+            const now = Date.now();
+            const secondsLeft = Math.max(0, Math.floor((raffleTime - now) / 1000));
+            setSeconds(secondsLeft);
+        }
     }, [setDeposits, setSeconds]);
 
     const handleGameStarted = (data: GameStartedData) => {

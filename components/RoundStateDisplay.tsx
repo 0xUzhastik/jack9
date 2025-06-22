@@ -42,7 +42,9 @@ export function RoundStateDisplay({
   }, [totalAmount, prevTotalAmount]);
 
   const formatTime = (timeInSeconds: number) => {
-    return `0:${timeInSeconds.toString().padStart(2, '0')}`;
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   return (

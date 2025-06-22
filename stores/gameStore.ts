@@ -10,7 +10,7 @@ interface Deposit {
   timestamp: Date;
 }
 
-type RoundState = 'active' | 'ending' | 'ended' | 'starting';
+export type RoundState = 'active' | 'ending' | 'ended' | 'starting';
 
 interface GameStore {
   // Round state

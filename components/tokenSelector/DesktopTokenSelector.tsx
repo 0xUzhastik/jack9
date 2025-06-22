@@ -42,6 +42,13 @@ import { useTokenStore } from "@/stores/tokenStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useUIStore } from "@/stores/uiStore";
 import { createFocusHandlers } from "@/lib/inputHandlers";
+import { usePrivy } from '@privy-io/react-auth';
+import { useToast } from '../../hooks/use-toast';
+import { buildDepositTransaction } from '../../lib/transaction-builder';
+import { useAudioStore } from '../../stores/audioStore';
+import { WalletConnect } from '../WalletConnect';
+import { Connection } from '@solana/web3.js';
+import { jackpotAddr } from '../../lib/constants';
 
 interface DesktopTokenSelectorProps {
   tokens: TokenRow[];
@@ -53,19 +60,24 @@ interface DesktopTokenSelectorProps {
 
 export function DesktopTokenSelector({
   tokens,
-  tokenPricesInSol = {}, // Provide default to prevent undefined errors
+  tokenPricesInSol = {},
   solPrice = null,
   loading = false,
   error = null,
 }: DesktopTokenSelectorProps) {
   /* ----------------------------- Zustand stores ---------------------------- */
-  const { selectedTokens, addToken, removeToken, updateTokenAmount } =
+  const { selectedTokens, addToken, removeToken, updateTokenAmount, clearSelectedTokens } =
     useTokenStore();
     
   const { showAdvancedControls, autoSelectOptimalAmounts } =
     useSettingsStore();
 
-  const { setInputFocus, focusedInputs } = useUIStore();
+  const { setInputFocus, focusedInputs, isEditingTokens: uiIsEditingTokens } = useUIStore();
+
+  const { ready, authenticated, user } = usePrivy();
+  const { toast } = useToast();
+  const playSound = useAudioStore((s) => s.playSound);
+  const [depositLoading, setDepositLoading] = useState(false);
 
   /* ------------------------------- Local state ----------------------------- */
   const [searchTerm, setSearchTerm] = useState("");
@@ -222,6 +234,24 @@ export function DesktopTokenSelector({
     }
   }, [tokens, tokenPricesInSol, solPrice, handleUpdateAmount]);
 
+  const handleDeposit = async () => {
+    if (!user?.wallet?.address || selectedTokens.length === 0 || totalSelectedUSD <= 0) return;
+    setDepositLoading(true);
+    try {
+      const connection = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC!);
+      const tx = await buildDepositTransaction(selectedTokens, user.wallet.address, jackpotAddr, connection);
+      // @ts-ignore
+      const { signature } = await window.solana.signAndSendTransaction(tx);
+      toast({ title: 'Deposit successful', description: 'Your deposit was sent!' });
+      if (playSound) playSound('deposit');
+      clearSelectedTokens();
+    } catch (e: any) {
+      toast({ title: 'Deposit failed', description: e?.message || 'Something went wrong', variant: 'destructive' });
+    } finally {
+      setDepositLoading(false);
+    }
+  };
+
   /* ------------------------------ Loading / error -------------------------- */
   if (loading) {
     return (
@@ -252,6 +282,7 @@ export function DesktopTokenSelector({
   /*                              MAIN RENDER                                 */
   /* ------------------------------------------------------------------------ */
   return (
+    <div className="relative flex flex-col h-full">
     <Card className="casino-box casino-box-gold h-full flex flex-col overflow-hidden">
       {/* ------------------------------- Header ------------------------------ */}
       <CardHeader className="p-4 border-b-2 border-[#FFD700]">
@@ -641,5 +672,6 @@ export function DesktopTokenSelector({
         }
       `}</style>
     </Card>
+    </div>
   );
 }

@@ -11,8 +11,13 @@ import TokenPortfolioView from './TokenPortfolioView';
 import { WalletConnect } from './WalletConnect';
 import { useTokenStore } from '@/stores/tokenStore';
 import { useDebugStore } from '@/stores/debugStore';
+import { TokenRow } from '@/lib/tokenUtils';
 
-export function TokenPortfolioWrapper() {
+interface TokenPortfolioWrapperProps {
+  mutateTokenBalances?: () => Promise<any>;
+}
+
+export function TokenPortfolioWrapper({ mutateTokenBalances }: TokenPortfolioWrapperProps) {
     const { authenticated, user } = usePrivy();
     
     // Get debug wallet address
@@ -22,7 +27,8 @@ export function TokenPortfolioWrapper() {
     const effectiveWalletAddress = debugWalletAddress || user?.wallet?.address;
     const isUsingDebugWallet = !!debugWalletAddress;
     
-    const { tokens, loading, error } = useTokenBalances(effectiveWalletAddress);
+    const { tokens: rawTokens = [], loading, error } = useTokenBalances(effectiveWalletAddress);
+    const tokens: TokenRow[] = rawTokens;
 
     // Get SOL price
     const { price: solPrice } = useSolPriceUSD();
@@ -42,14 +48,14 @@ export function TokenPortfolioWrapper() {
     });
 
     // Filter tokens to only include those with DexScreener trading data
-    const filteredTokens = useMemo(() => {
+    const filteredTokens: TokenRow[] = useMemo(() => {
         if (!tokens || !dexScreenerData) return [];
         
         const dexScreenerTokens = new Set(
-            dexScreenerData.map(pair => pair.baseToken.address)
+            dexScreenerData.map((pair: any) => pair.baseToken.address)
         );
 
-        const filtered = tokens.filter(token => dexScreenerTokens.has(token.mint));
+        const filtered = tokens.filter((token: TokenRow) => dexScreenerTokens.has(token.mint));
         
         // Only log in development and when data actually changes
         if (process.env.NODE_ENV === 'development' && filtered.length > 0) {
@@ -76,16 +82,21 @@ export function TokenPortfolioWrapper() {
     }, [filteredTokens, tokenPricesInSol, solPrice]);
 
     // Zustand store for slider percentages
-    const { 
-        sliderPercentages, 
-        setSliderPercentages, 
-        updateSliderPercentage 
+    const {
+        sliderPercentages,
+        setSliderPercentages,
+        updateSliderPercentage,
+        selectedTokens,
+        addToken,
+        removeToken
     } = useTokenStore();
+    // Ensure sliderPercentages is always a number[]
+    const safeSliderPercentages: number[] = Array.isArray(sliderPercentages) ? sliderPercentages : [];
 
     // Initialize slider percentages only when needed
     const initializeSliderPercentages = useCallback(() => {
         if (filteredTokens.length > 0 && sliderPercentages.length !== filteredTokens.length) {
-            const newSliderPercentages = filteredTokens.map(() => 50); // Default to 50%
+            const newSliderPercentages = filteredTokens.map(() => 0); // Default to 0%
             setSliderPercentages(newSliderPercentages);
         }
     }, [filteredTokens.length, sliderPercentages.length, setSliderPercentages]);
@@ -97,8 +108,22 @@ export function TokenPortfolioWrapper() {
 
     // Memoized slider change handler
     const handleSliderChange = useCallback((index: number, percentage: number) => {
+        const safeTokens: TokenRow[] = filteredTokens || [];
         updateSliderPercentage(index, percentage);
-    }, [updateSliderPercentage]);
+        const token = safeTokens[index];
+        if (!token) return;
+        // Always get the latest amount from the tokens array (from SWR)
+        const latestToken = tokens.find(t => t.mint === token.mint) || token;
+        const selectedAmount = (latestToken.amount * percentage) / 100;
+        const isAlreadySelected = selectedTokens.some(t => t.mint === token.mint);
+        if (percentage > 0) {
+            // Add or update token in selectedTokens with the latest amount
+            addToken({ ...latestToken, selectedAmount });
+        } else if (isAlreadySelected) {
+            // Remove token if slider is set to 0
+            removeToken(token.mint);
+        }
+    }, [updateSliderPercentage, filteredTokens, selectedTokens, addToken, removeToken, tokens]);
 
     // Helper functions to prevent recreation on every render
     const getTokenImage = useCallback((index: number) => {
@@ -122,6 +147,14 @@ export function TokenPortfolioWrapper() {
 
     // Calculate total columns needed - exactly match the number of tokens
     const totalColumns = filteredTokens.length;
+
+    // Clear sliders when selectedTokens is cleared (after deposit)
+    useEffect(() => {
+        if (selectedTokens.length === 0 && safeSliderPercentages.some(p => p > 0)) {
+            setSliderPercentages(safeSliderPercentages.map(() => 0));
+            if (mutateTokenBalances) mutateTokenBalances();
+        }
+    }, [selectedTokens.length, safeSliderPercentages, setSliderPercentages, mutateTokenBalances]);
 
     // Show loading state
     if (loading) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import useSWR from 'swr';
 
 const RPC_ENDPOINT = process.env.NEXT_PUBLIC_HELIUS_RPC ?? "";
 
@@ -180,240 +181,189 @@ function extractHeliusMetadata(asset: HeliusAsset): TokenMetadata {
 const rpcMetadataCache = new Map<string, TokenMetadata>();
 const rpcCacheExpiry = new Map<string, number>();
 
-export function useTokenBalances(publicKey: string | undefined) {
-  const [tokens, setTokens] = useState<TokenRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// SWR fetcher for balances
+const fetchBalances = async (publicKey: string) => {
+  if (!publicKey) return [];
 
-  // 🔥 MEMOIZE: Stable publicKey to prevent unnecessary re-runs
-  const stablePublicKey = useMemo(() => publicKey, [publicKey]);
+  // 1️⃣ Fetch balances from Jupiter API
+  const balanceRes = await fetch(
+    `https://lite-api.jup.ag/ultra/v1/balances/${publicKey}`
+  );
+  if (!balanceRes.ok) throw new Error("Failed to fetch balances");
+  const balances: JupiterBalanceResponse = await balanceRes.json();
 
-  useEffect(() => {
-    if (!stablePublicKey) {
-      setTokens([]);
-      setLoading(false);
-      return;
-    }
+  const nonZero = Object.entries(balances).filter(
+    ([, b]) => b.uiAmount > 0
+  );
+  if (!nonZero.length) {
+    return [];
+  }
 
-    // 🔥 DEBOUNCE: Prevent rapid consecutive calls
-    let isCancelled = false;
-    const timeoutId = setTimeout(async () => {
-      if (isCancelled) return;
-      
-      try {
-        setLoading(true);
-        setError(null);
+  // 2️⃣ Get non-SOL mints for metadata fetching
+  const mints = nonZero
+    .filter(([m]) => m !== "SOL")
+    .map(([m]) => m);
 
-        // 1️⃣ Fetch balances from Jupiter API
-        const balanceRes = await fetch(
-          `https://lite-api.jup.ag/ultra/v1/balances/${stablePublicKey}`
-        );
-        if (!balanceRes.ok) throw new Error("Failed to fetch balances");
-        const balances: JupiterBalanceResponse = await balanceRes.json();
-        
-        if (isCancelled) return;
-        
-        const nonZero = Object.entries(balances).filter(
-          ([, b]) => b.uiAmount > 0
-        );
-        if (!nonZero.length) {
-          setTokens([]);
-          return;
-        }
+  // 3️⃣ First try DexScreener for metadata (with caching)
+  const dexScreenerData = await fetchDexScreenerData(mints);
 
-        // 2️⃣ Get non-SOL mints for metadata fetching
-        const mints = nonZero
-          .filter(([m]) => m !== "SOL")
-          .map(([m]) => m);
+  // 4️⃣ Build initial metadata map from DexScreener
+  const metadataMap: Record<string, TokenMetadata> = {};
+  const mintsNeedingRpcData: string[] = [];
 
-        // 3️⃣ First try DexScreener for metadata (with caching)
-        const dexScreenerData = await fetchDexScreenerData(mints);
-        
-        if (isCancelled) return;
-        
-        // 4️⃣ Build initial metadata map from DexScreener
-        const metadataMap: Record<string, TokenMetadata> = {};
-        const mintsNeedingRpcData: string[] = [];
-        
-        mints.forEach(mint => {
-          const dexPairs = dexScreenerData[mint];
-          if (dexPairs && dexPairs.length > 0) {
-            const dexMetadata = extractDexScreenerMetadata(dexPairs);
-            // Only use DexScreener data if we have at least symbol and image
-            if (dexMetadata.symbol && dexMetadata.image) {
-              metadataMap[mint] = {
-                symbol: dexMetadata.symbol,
-                name: dexMetadata.name || dexMetadata.symbol,
-                image: dexMetadata.image,
-              };
-            } else {
-              // Partial data, still need RPC fallback
-              mintsNeedingRpcData.push(mint);
-              if (dexMetadata.symbol || dexMetadata.name) {
-                // Store partial data and we'll fill in missing pieces from RPC
-                metadataMap[mint] = {
-                  symbol: dexMetadata.symbol || mint.slice(0, 4),
-                  name: dexMetadata.name || dexMetadata.symbol || mint.slice(0, 4),
-                  image: "/solana-logo.png", // Will be overridden by RPC if available
-                };
-              }
-            }
-          } else {
-            // No DexScreener data, need RPC
-            mintsNeedingRpcData.push(mint);
-          }
-        });
-
-        // 5️⃣ Fetch missing metadata from Helius RPC (fallback) with caching
-        if (RPC_ENDPOINT && mintsNeedingRpcData.length > 0) {
-          console.log('🔄 Fetching RPC data for', mintsNeedingRpcData.length, 'tokens missing from DexScreener...');
-          
-          // Check RPC cache first
-          const now = Date.now();
-          const uncachedMints: string[] = [];
-          
-          mintsNeedingRpcData.forEach(mint => {
-            const cacheExpiry = rpcCacheExpiry.get(mint);
-            if (cacheExpiry && now < cacheExpiry && rpcMetadataCache.has(mint)) {
-              // Use cached data
-              const cachedMetadata = rpcMetadataCache.get(mint)!;
-              const existingMetadata = metadataMap[mint];
-              
-              if (existingMetadata) {
-                // Merge with existing DexScreener data
-                metadataMap[mint] = {
-                  symbol: existingMetadata.symbol || cachedMetadata.symbol,
-                  name: existingMetadata.name || cachedMetadata.name,
-                  image: existingMetadata.image !== "/solana-logo.png" 
-                    ? existingMetadata.image 
-                    : cachedMetadata.image,
-                };
-              } else {
-                metadataMap[mint] = cachedMetadata;
-              }
-            } else {
-              uncachedMints.push(mint);
-            }
-          });
-          
-          // Only fetch uncached mints
-          if (uncachedMints.length > 0) {
-            const chunks = Array.from(
-              { length: Math.ceil(uncachedMints.length / 100) },
-              (_, i) => uncachedMints.slice(i * 100, i * 100 + 100)
-            );
-
-            await Promise.all(
-              chunks.map(async (ids) => {
-                if (isCancelled) return;
-                
-                try {
-                  const body = {
-                    jsonrpc: "2.0",
-                    id: "asset-batch",
-                    method: "getAssetBatch",
-                    params: { ids },
-                  };
-                  const res = await fetch(RPC_ENDPOINT, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(body),
-                  });
-                  const { result } = await res.json();
-                  result?.forEach((asset: HeliusAsset) => {
-                    if (asset && !isCancelled) {
-                      const heliusMetadata = extractHeliusMetadata(asset);
-                      
-                      // Cache the metadata
-                      rpcMetadataCache.set(asset.id, heliusMetadata);
-                      rpcCacheExpiry.set(asset.id, now + CACHE_DURATION);
-                      
-                      const existingMetadata = metadataMap[asset.id];
-                      
-                      if (existingMetadata) {
-                        // Merge with existing DexScreener data, prioritizing DexScreener image
-                        metadataMap[asset.id] = {
-                          symbol: existingMetadata.symbol || heliusMetadata.symbol,
-                          name: existingMetadata.name || heliusMetadata.name,
-                          image: existingMetadata.image !== "/solana-logo.png" 
-                            ? existingMetadata.image 
-                            : heliusMetadata.image,
-                        };
-                      } else {
-                        // Use RPC data as complete fallback
-                        metadataMap[asset.id] = heliusMetadata;
-                      }
-                    }
-                  });
-                } catch (chunkError) {
-                  console.warn('Failed to fetch RPC metadata chunk:', chunkError);
-                }
-              })
-            );
-          }
-        }
-
-        if (isCancelled) return;
-
-        // 6️⃣ Build final token array
-        const rows: TokenRow[] = nonZero.map(([mint, bal]) => {
-          if (mint === "SOL") {
-            return {
-              mint: "So11111111111111111111111111111111111111112",
-              amount: bal.uiAmount, // 🔥 REVERTED: Use real SOL balance instead of hardcoded 6373
-              decimals: 9,
-              symbol: "SOL",
-              name: "Solana",
-              image: "https://solana.com/src/img/branding/solanaLogoMark.png",
-            };
-          }
-
-          const metadata = metadataMap[mint] || {
-            symbol: mint.slice(0, 4),
-            name: mint.slice(0, 8),
-            image: "/solana-logo.png",
+  mints.forEach(mint => {
+    const dexPairs = dexScreenerData[mint];
+    if (dexPairs && dexPairs.length > 0) {
+      const dexMetadata = extractDexScreenerMetadata(dexPairs);
+      // Only use DexScreener data if we have at least symbol and image
+      if (dexMetadata.symbol && dexMetadata.image) {
+        metadataMap[mint] = {
+          symbol: dexMetadata.symbol,
+          name: dexMetadata.name || dexMetadata.symbol,
+          image: dexMetadata.image,
+        };
+      } else {
+        // Partial data, still need RPC fallback
+        mintsNeedingRpcData.push(mint);
+        if (dexMetadata.symbol || dexMetadata.name) {
+          // Store partial data and we'll fill in missing pieces from RPC
+          metadataMap[mint] = {
+            symbol: dexMetadata.symbol || mint.slice(0, 4),
+            name: dexMetadata.name || dexMetadata.symbol || mint.slice(0, 4),
+            image: "/solana-logo.png", // Will be overridden by RPC if available
           };
-
-          return {
-            mint,
-            amount: bal.uiAmount,
-            decimals: getTokenDecimals(mint),
-            ...metadata,
-          };
-        });
-
-        // Sort by amount (highest first)
-        rows.sort((a, b) => b.amount - a.amount);
-        
-        // Only log summary in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🎯 Token balance fetch complete:', {
-            totalTokens: rows.length,
-            dexScreenerImages: rows.filter(r => r.image && r.image !== '/solana-logo.png' && !r.image.includes('helius')).length,
-            rpcFallbackImages: rows.filter(r => r.image && r.image.includes('helius')).length
-          });
-        }
-        
-        setTokens(rows);
-
-      } catch (err) {
-        if (!isCancelled) {
-          console.error("Token fetch error:", err);
-          setError(err instanceof Error ? err.message : "Failed to fetch tokens");
-          setTokens([]);
-        }
-      } finally {
-        if (!isCancelled) {
-          setLoading(false);
         }
       }
-    }, 100); // 100ms debounce
+    } else {
+      // No DexScreener data, need RPC
+      mintsNeedingRpcData.push(mint);
+    }
+  });
 
-    return () => {
-      isCancelled = true;
-      clearTimeout(timeoutId);
+  // 5️⃣ Fetch missing metadata from Helius RPC (fallback) with caching
+  if (RPC_ENDPOINT && mintsNeedingRpcData.length > 0) {
+    // Check RPC cache first
+    const now = Date.now();
+    const uncachedMints: string[] = [];
+
+    mintsNeedingRpcData.forEach(mint => {
+      const cacheExpiry = rpcCacheExpiry.get(mint);
+      if (cacheExpiry && now < cacheExpiry && rpcMetadataCache.has(mint)) {
+        // Use cached data
+        const cachedMetadata = rpcMetadataCache.get(mint)!;
+        const existingMetadata = metadataMap[mint];
+
+        if (existingMetadata) {
+          // Merge with existing DexScreener data
+          metadataMap[mint] = {
+            symbol: existingMetadata.symbol || cachedMetadata.symbol,
+            name: existingMetadata.name || cachedMetadata.name,
+            image: existingMetadata.image !== "/solana-logo.png" 
+              ? existingMetadata.image 
+              : cachedMetadata.image,
+          };
+        } else {
+          metadataMap[mint] = cachedMetadata;
+        }
+      } else {
+        uncachedMints.push(mint);
+      }
+    });
+
+    // Only fetch uncached mints
+    if (uncachedMints.length > 0) {
+      const chunks = Array.from(
+        { length: Math.ceil(uncachedMints.length / 100) },
+        (_, i) => uncachedMints.slice(i * 100, i * 100 + 100)
+      );
+
+      await Promise.all(
+        chunks.map(async (ids) => {
+          try {
+            const body = {
+              jsonrpc: "2.0",
+              id: "asset-batch",
+              method: "getAssetBatch",
+              params: { ids },
+            };
+            const res = await fetch(RPC_ENDPOINT, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            const { result } = await res.json();
+            result?.forEach((asset: HeliusAsset) => {
+              if (asset) {
+                const heliusMetadata = extractHeliusMetadata(asset);
+
+                // Cache the metadata
+                rpcMetadataCache.set(asset.id, heliusMetadata);
+                rpcCacheExpiry.set(asset.id, Date.now() + CACHE_DURATION);
+
+                const existingMetadata = metadataMap[asset.id];
+
+                if (existingMetadata) {
+                  // Merge with existing DexScreener data, prioritizing DexScreener image
+                  metadataMap[asset.id] = {
+                    symbol: existingMetadata.symbol || heliusMetadata.symbol,
+                    name: existingMetadata.name || heliusMetadata.name,
+                    image: existingMetadata.image !== "/solana-logo.png" 
+                      ? existingMetadata.image 
+                      : heliusMetadata.image,
+                  };
+                } else {
+                  // Use RPC data as complete fallback
+                  metadataMap[asset.id] = heliusMetadata;
+                }
+              }
+            });
+          } catch (chunkError) {
+            console.warn('Failed to fetch RPC metadata chunk:', chunkError);
+          }
+        })
+      );
+    }
+  }
+
+  // 6️⃣ Build final token array
+  const rows: TokenRow[] = nonZero.map(([mint, bal]) => {
+    if (mint === "SOL") {
+      return {
+        mint: "So11111111111111111111111111111111111111112",
+        amount: bal.uiAmount,
+        decimals: 9,
+        symbol: "SOL",
+        name: "Solana",
+        image: "https://solana.com/src/img/branding/solanaLogoMark.png",
+      };
+    }
+
+    const metadata = metadataMap[mint] || {
+      symbol: mint.slice(0, 4),
+      name: mint.slice(0, 8),
+      image: "/solana-logo.png",
     };
-  }, [stablePublicKey]);
 
-  return { tokens, loading, error };
+    return {
+      mint,
+      amount: bal.uiAmount,
+      decimals: getTokenDecimals(mint),
+      ...metadata,
+    };
+  });
+
+  // Sort by amount (highest first)
+  rows.sort((a, b) => b.amount - a.amount);
+
+  return rows;
+};
+
+export function useTokenBalances(publicKey: string | undefined) {
+  const stablePublicKey = useMemo(() => publicKey, [publicKey]);
+  const { data: tokens = [], error, isLoading, mutate } = useSWR(
+    stablePublicKey ? ['tokenBalances', stablePublicKey] : null,
+    () => fetchBalances(stablePublicKey!),
+    { revalidateOnFocus: false }
+  );
+  return { tokens, loading: isLoading, error, mutate };
 }
