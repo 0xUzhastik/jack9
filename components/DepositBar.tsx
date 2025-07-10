@@ -168,7 +168,7 @@ export function DepositBar({ selectedTokens }: DepositBarProps) {
       if (window.solana && window.solana.signAndSendTransaction) {
         const signature = await window.solana.signAndSendTransaction(tx);
         await connection.confirmTransaction(signature.signature, 'confirmed');
-        toast({ title: 'Successfully entered the round!', description: signature.signature });
+        toast({ title: 'Deposit sent! Waiting for confirmation...', description: signature.signature });
         clearSelectedTokens();
         setIsExpanded(false);
       } else {

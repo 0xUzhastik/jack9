@@ -383,13 +383,17 @@ export function DesktopTokenSelector({
                 let selectedUSDValue: number | null = null;
                 let maxUSDValue = 0;
 
-                if (tokenPriceInSol && solPrice) {
+                if (token.mint === 'So11111111111111111111111111111111111111112' && solPrice) {
+                  tokenUSDValue = token.amount * solPrice;
+                  if (isSelected) {
+                    selectedUSDValue = selectedAmount * solPrice;
+                  }
+                  maxUSDValue = Math.floor(token.amount * solPrice * 100) / 100;
+                } else if (tokenPriceInSol && solPrice) {
                   tokenUSDValue = calculateTokenUSDValue(token, token.amount, tokenPriceInSol, solPrice);
-                  
                   if (isSelected) {
                     selectedUSDValue = calculateTokenUSDValue(token, selectedAmount, tokenPriceInSol, solPrice);
                   }
-                  
                   maxUSDValue = calculateMaxUSDValue(token, tokenPriceInSol, solPrice);
                 }
 
