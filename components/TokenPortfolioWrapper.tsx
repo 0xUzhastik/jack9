@@ -70,6 +70,9 @@ export function TokenPortfolioWrapper({ mutateTokenBalances }: TokenPortfolioWra
         if (!filteredTokens || !solPrice) return [];
         
         const values = filteredTokens.map(token => {
+            if (token.mint === 'So11111111111111111111111111111111111111112') {
+                return token.amount * solPrice;
+            }
             const tokenPriceInSol = tokenPricesInSol[token.mint];
             if (tokenPriceInSol) {
                 const valueInSol = token.amount * tokenPriceInSol;

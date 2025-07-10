@@ -68,9 +68,18 @@ export function useWebSocketGameEvents() {
         const depositMap = new Map();
         for (const d of data.deposits) {
             const key = `${d.signature || d._id || ''}_${d.from}`;
-            const tokenSymbol = d.metadata?.symbol || '';
-            const tokenAmount = d.tokenAmount * (tokenPrices[d.tokenMint] || 0);
-            const tokenAmountUSD = d.tokenAmount * (tokenPrices[d.tokenMint] || 0) * currentSolPrice;
+            let tokenSymbol, tokenAmount, tokenAmountUSD;
+
+            if (d.kind === 'SOL') {
+                tokenSymbol = 'SOL';
+                tokenAmount = d.sol;
+                tokenAmountUSD = d.sol * currentSolPrice;
+            } else {
+                tokenSymbol = d.metadata?.symbol || '';
+                tokenAmount = d.tokenAmount * (tokenPrices[d.tokenMint] || 0);
+                tokenAmountUSD = d.tokenAmount * (tokenPrices[d.tokenMint] || 0) * currentSolPrice;
+            }
+
             if (depositMap.has(key)) {
                 const dep = depositMap.get(key);
                 dep.tokens.push(tokenSymbol);
