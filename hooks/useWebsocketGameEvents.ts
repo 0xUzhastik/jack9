@@ -7,6 +7,7 @@ import { socketBus } from '@/lib/socketBus';
 import { toast } from '@/hooks/use-toast';
 import { Deposit } from '@/lib/types'; // Assuming you have this type
 import { useSolPriceUSD } from './useSolPriceUSD';
+import { usePrivy } from '@privy-io/react-auth';
 
 // Define the shape of the incoming WebSocket data based on your examples
 interface GameUpdateData {
@@ -43,6 +44,12 @@ export function useWebSocketGameEvents() {
     } = useGameStore.getState();
 
     const { price: solPrice } = useSolPriceUSD();
+    const { user } = usePrivy();
+    const userWalletRef = useRef<string | undefined>(user?.wallet?.address);
+
+    useEffect(() => {
+        userWalletRef.current = user?.wallet?.address;
+    }, [user]);
 
     // Use a ref to always have the latest solPrice
     const solPriceRef = useRef<number | undefined>(solPrice);
@@ -51,6 +58,7 @@ export function useWebSocketGameEvents() {
     }, [solPrice]);
 
     const hasLoadedInitialRound = useRef(false);
+    const prevUserDepositSigsRef = useRef<Set<string>>(new Set());
 
     console.log('[ws] solPrice:', solPrice);
 
@@ -64,8 +72,21 @@ export function useWebSocketGameEvents() {
         console.log('[ws] handleGameUpdated:', {data});
         const tokenPrices = data.tokenPricesSol || {};
 
+        // Get current user wallet address
+        // let userWallet: string | null = null;
+        // if (typeof window !== 'undefined' && window.localStorage.getItem('privy:wallet')) {
+        //     try {
+        //         userWallet = JSON.parse(window.localStorage.getItem('privy:wallet') || '{}').address || null;
+        //     } catch {}
+        // }
+
+        const userWallet = userWalletRef.current;
+
         // Aggregate deposits by signature+user
         const depositMap = new Map();
+        let newUserDepositSigs = new Set(prevUserDepositSigsRef.current);
+        let toastsShownThisUpdate = new Set();
+
         for (const d of data.deposits) {
             const key = `${d.signature || d._id || ''}_${d.from}`;
             let tokenSymbol, tokenAmount, tokenAmountUSD;
@@ -78,6 +99,21 @@ export function useWebSocketGameEvents() {
                 tokenSymbol = d.metadata?.symbol || '';
                 tokenAmount = d.tokenAmount * (tokenPrices[d.tokenMint] || 0);
                 tokenAmountUSD = d.tokenAmount * (tokenPrices[d.tokenMint] || 0) * currentSolPrice;
+            }
+
+            // Debug logging for credited toast
+            console.log('[toast-debug] userWallet:', userWallet, 'd.from:', d.from, 'd.signature:', d.signature);
+            if (
+                typeof userWallet === 'string' &&
+                d.from === userWallet &&
+                d.signature &&
+                !prevUserDepositSigsRef.current.has(d.signature) &&
+                !toastsShownThisUpdate.has(d.signature)
+            ) {
+                console.log('[toast-debug] Credited toast condition met for signature:', d.signature);
+                toast({ title: 'Your deposit has been credited!' });
+                newUserDepositSigs.add(d.signature);
+                toastsShownThisUpdate.add(d.signature);
             }
 
             if (depositMap.has(key)) {
@@ -114,6 +150,7 @@ export function useWebSocketGameEvents() {
             const secondsLeft = Math.max(0, Math.floor((raffleTime - now) / 1000));
             setSeconds(secondsLeft);
         }
+        prevUserDepositSigsRef.current = newUserDepositSigs;
     }, [setDeposits, setSeconds]);
 
     const handleGameStarted = (data: GameStartedData) => {

@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Providers } from '@/components/Providers'; // Import the new Providers
+import { Toaster } from '@/components/ui/toaster'; // Add this import
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -51,6 +52,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers> {/* Use the new Privy-based Providers component */}
           {children}
+          <Toaster /> {/* Render toasts globally */}
         </Providers>
       </body>
     </html>
