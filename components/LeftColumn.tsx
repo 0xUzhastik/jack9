@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { CurrentDeposits } from "./CurrentDeposits";
 import { useGameStore } from "@/stores/gameStore";
 import CountUp from 'react-countup';
+import { PastWinners } from "./PastWinners";
 
 interface LeftColumnProps {
   isMobile?: boolean;
@@ -80,8 +81,60 @@ export function LeftColumn({ isMobile = false }: LeftColumnProps) {
         transition={{ delay: 0.2 }}
         className="flex-1 min-h-0"
       >
-        <CurrentDeposits isMobile={isMobile} />
+        <div
+          style={{
+            background: 'rgba(40, 6, 44, 0.7)', // Match Recent Winners bg
+            border: '2px solid #FFD700',
+            borderRadius: '16px',
+            boxShadow: `
+              0 0 32px 8px rgba(255, 215, 0, 0.25), /* outside gold glow */
+              0 0 64px 0 rgba(74, 14, 78, 0.25), /* outside purple glow */
+              0 0 32px 0 rgba(255, 215, 0, 0.15) inset, /* inside gold glow */
+              0 0 64px 0 rgba(74, 14, 78, 0.15) inset /* inside purple glow */
+            `,
+            backdropFilter: 'blur(1px)',
+            WebkitBackdropFilter: 'blur(1px)',
+            height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <CurrentDeposits isMobile={isMobile} />
+        </div>
       </motion.div>
+      {/* Recent Winners - new card below Current Round */}
+      {!isMobile && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div
+            style={{
+              background: 'rgba(40, 6, 44, 0.7)',
+              border: '2px solid #FFD700',
+              borderRadius: '16px',
+              boxShadow: `
+                0 0 32px 8px rgba(255, 215, 0, 0.25),
+                0 0 64px 0 rgba(74, 14, 78, 0.25),
+                0 0 32px 0 rgba(255, 215, 0, 0.15) inset,
+                0 0 64px 0 rgba(74, 14, 78, 0.15) inset
+              `,
+              backdropFilter: 'blur(1px)',
+              WebkitBackdropFilter: 'blur(1px)',
+              marginTop: '8px', // Match gap-3 (0.75rem)
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div style={{ height: '180px', width: '100%' }}>
+              <PastWinners />
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

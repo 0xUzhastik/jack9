@@ -400,16 +400,8 @@ export function DesktopTokenSelector({
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    className={`rounded-xl border-2 transition-all duration-200 overflow-hidden ${
-                      isSelected
-                        ? "border-[#FFD700]"
-                        : "border-[#FFD700]/20 hover:border-[#FFD700]/60"
-                    }`}
-                    style={{
-                      background: isSelected
-                        ? "linear-gradient(145deg, rgba(255, 215, 0, 0.1), rgba(255, 255, 0, 0.05))"
-                        : "linear-gradient(145deg, rgba(74, 14, 78, 0.3), rgba(45, 10, 48, 0.2))",
-                    }}
+                    className={"rounded-xl transition-all duration-200 overflow-hidden"}
+                    style={{}}
                   >
                     {/* Main Token Row */}
                     <div className="p-3">
