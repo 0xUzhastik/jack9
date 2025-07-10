@@ -55,17 +55,23 @@ export function CenterColumn() {
   return (
     <div className="md:col-span-2 w-full max-w-full min-w-0 h-full min-h-0 flex flex-col gap-2 overflow-visible">
       {/* Donut Chart */}
-      <div className="w-full h-[50vh] min-h-0 relative pb-20 pt-4 z-5">
+      <div className="w-full h-[55vh] min-h-0 relative  pt-4 z-5">
         <JackpotDonutChart />
       </div>
-      {/* Shared Deposit Button (Desktop only) */}
+      {/* Token Selector/Portfolio (Desktop) or Empty space (Mobile) */}
+      {!isMobile && (
+        <div className="flex-1 min-h-0 overflow-visible" style={{ zIndex: 2 }}>
+          <TokenSelectorModeWrapper mutateTokenBalances={mutate} />
+        </div>
+      )}
+      {/* Shared Deposit Button (Desktop only) - moved below selector */}
       {!isMobile && (
         <div className="w-full flex flex-col items-center z-10 px-4">
           {(!authenticated || !user?.wallet?.address) ? (
             <WalletConnect />
           ) : (
             <Button
-              className="w-full text-lg font-bold py-4 mb-2"
+              className="max-w-[40%] mx-auto w-full text-lg font-bold py-4 mb-2 rounded-full transition-all duration-200 shadow-md hover:shadow-[0_0_24px_8px_rgba(255,215,0,0.5)] hover:ring-4 hover:ring-yellow-300/40 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black"
               disabled={selectedTokens.length === 0 || totalSelectedUSD <= 0 || depositLoading}
               onClick={handleDeposit}
             >
@@ -79,12 +85,6 @@ export function CenterColumn() {
               )}
             </Button>
           )}
-        </div>
-      )}
-      {/* Token Selector/Portfolio (Desktop) or Empty space (Mobile) */}
-      {!isMobile && (
-        <div className="flex-1 min-h-0 overflow-visible" style={{ zIndex: 2 }}>
-          <TokenSelectorModeWrapper mutateTokenBalances={mutate} />
         </div>
       )}
     </div>

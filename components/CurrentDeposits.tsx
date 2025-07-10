@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Activity } from "lucide-react";
-import { PastWinners } from "./PastWinners";
 import { useGameStore } from "@/stores/gameStore";
 
 interface CurrentDepositsProps {
@@ -202,7 +201,22 @@ export function CurrentDeposits({ isMobile = false }: CurrentDepositsProps) {
 
   // Desktop layout - keep card wrapper
   return (
-    <Card className="casino-box casino-box-gold overflow-scroll p-0 h-full flex flex-col relative">
+    <Card 
+      className="casino-box casino-box-gold overflow-scroll p-0 h-full flex flex-col relative"
+      style={{
+        background: 'rgba(74, 14, 78, 0.4)',
+        border: '2px solid #FFD700',
+        borderRadius: '16px',
+        boxShadow: `
+          0 0 32px 8px rgba(255, 215, 0, 0.25), /* outside gold glow */
+          0 0 64px 0 rgba(74, 14, 78, 0.25), /* outside purple glow */
+          0 0 32px 0 rgba(255, 215, 0, 0.15) inset, /* inside gold glow */
+          0 0 64px 0 rgba(74, 14, 78, 0.15) inset /* inside purple glow */
+        `,
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+    >
       {/* Corner stars */}
       <div className="absolute top-2 left-2 z-10">
         <Star className="h-4 w-4 casino-star" fill="currentColor" />
@@ -409,7 +423,7 @@ export function CurrentDeposits({ isMobile = false }: CurrentDepositsProps) {
         {/* Past Winners at the bottom - Only show on desktop */}
         {!isMobile && (
           <div className="h-[180px] flex-shrink-0 mt-auto">
-            <PastWinners />
+            {/* PastWinners component was removed */}
           </div>
         )}
       </CardContent>

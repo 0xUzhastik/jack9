@@ -111,8 +111,7 @@ export function MobileTokenRow({
       initial={{ opacity: 0, y: -10 }}
       animate={{ 
         opacity: 1, 
-        y: 0,
-        backgroundColor: isSelected ? "rgba(255, 215, 0, 0.1)" : "rgba(74, 14, 78, 0.3)"
+        y: 0
       }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ 
@@ -121,11 +120,7 @@ export function MobileTokenRow({
         damping: 25,
         duration: 0.3
       }}
-      className={`relative overflow-hidden transition-all duration-300 mb-2 ${
-        isSelected
-          ? "bg-[#FFD700]/10 border-2 border-[#FFD700]"
-          : "border-2 border-transparent hover:border-[#FFD700]/50 hover:bg-[#FFD700]/5"
-      }`}
+      className={"relative overflow-hidden transition-all duration-300 mb-2"}
       style={{
         borderRadius: "12px"
       }}

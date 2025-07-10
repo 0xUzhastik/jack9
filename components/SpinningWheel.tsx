@@ -100,7 +100,7 @@ export function SpinningWheel({
       {/* Pointer - positioned at the top */}
       <div 
         className="absolute left-1/2 transform -translate-x-1/2 z-30 pointer-events-none"
-        style={{ top: '-20px' }}
+        style={{ top: '-15px' }}
       >
         <motion.div
           animate={{

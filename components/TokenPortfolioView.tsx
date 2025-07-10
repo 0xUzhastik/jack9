@@ -140,15 +140,17 @@ const TokenPortfolioView = memo(function TokenPortfolioView({
   const hasAnySelected = bottomRow.length > 0;
 
   return (
-    <div className="w-full h-full flex flex-col " ref={containerRef}>
-      {/* 🔥 DEBUG: SELECTED TOKENS AREA - GREEN BACKGROUND */}
+    <div className="w-full h-full relative" ref={containerRef}>
+      {/* Selected tokens area absolutely positioned above controls, with a 20px gap and max height */}
       <div 
-        className="relative h-1/2 w-full overflow-visible"
+        className="absolute left-0 right-0"
         style={{ 
-          backgroundColor: 'rgba(0, 255, 0, 0.1)', // 🟢 DEBUG: Green background
-          border: '2px solid rgba(0, 255, 0, 0.3)',
+          // Removed backgroundColor and border for production
           borderRadius: '8px',
-          paddingTop: `${48 * scaleFactor}px` // 🔥 FIXED: Scale padding (was pt-12 = 48px)
+          paddingTop: `${32 * scaleFactor}px`,
+          bottom: '140px', // 120px controls + 20px gap
+          maxHeight: '45%', // Make green area about 45% of parent height
+          overflow: 'visible'
         }}
       >
         {/* Only show selected stacks if there are any */}
@@ -312,7 +314,9 @@ const TokenPortfolioView = memo(function TokenPortfolioView({
         {/* Show message when no tokens are selected */}
         {!hasAnySelected && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
+            <div className="text-center"
+              style={{ marginTop: '-25px' }}
+            >
               <div 
                 className="font-bold text-[#FFD700] mb-2"
                 style={{ 
@@ -338,139 +342,33 @@ const TokenPortfolioView = memo(function TokenPortfolioView({
         )}
       </div>
 
-      {/* Combined remaining stacks and controls in single scrollable container */}
-      <div className="relative flex-1 w-full">
-        {/* Scrollable wrapper */}
-        <div className={`h-full  ${shouldCenter ? '' : 'overflow-x-auto'}`}>
-          <div
-            className="rounded-lg  h-full"
+      {/* Controls pinned to bottom, fixed collapsed height, absolutely positioned */}
+      <div className="absolute bottom-0 left-0 w-full" style={{ height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', zIndex: 1000 }}>
+        <div className="rounded-lg">
+          <div 
+            className="col-span-full"
             style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${totalColumns}, ${140 * scaleFactor}px)`, // 🔥 FIXED: Apply scale factor to column width
-              gridTemplateRows: `${200 * scaleFactor}px auto`, // 🔥 FIXED: Scale the first row height explicitly
-              gap: '0',
-              justifyContent: shouldCenter ? 'center' : 'start', // Dynamic centering
-              minWidth: shouldCenter ? 'auto' : `${totalColumns * 140 * scaleFactor}px` // 🔥 FIXED: Apply scale factor to min width
+              // Removed backgroundColor and border for production
+              borderRadius: '8px',
+              padding: `${8 * scaleFactor}px 0`,
+              height: '100%',
+              boxSizing: 'border-box'
             }}
           >
-            {/* 🔥 DEBUG: REMAINING STACKS AREA - BLUE BACKGROUND */}
-            {Array.from({ length: totalColumns }, (_, columnIndex) => {
-              const columnNumber = columnIndex + 1;
-
-              // Find token that should be in this column
-              const tokenIndex = stackValues.findIndex((_, index) =>
-                getColumnForToken(index, stackValues.length) === columnNumber
-              );
-
-              const hasToken = tokenIndex !== -1;
-              const value = hasToken ? stackValues[tokenIndex] : 0;
-              const { remainingValue } = hasToken ? getDisplayValues(tokenIndex) : { remainingValue: 0 };
-
-              return (
-                <div
-                  key={`remaining-col-${columnNumber}`}
-                  className="flex flex-col items-center justify-end relative"
-                  style={{
-                    minWidth: `${140 * scaleFactor}px`, // 🔥 FIXED: Apply scale factor
-                    maxWidth: `${140 * scaleFactor}px`, // 🔥 FIXED: Apply scale factor
-                    gridRow: 1, // First row
-                    backgroundColor: 'rgba(0, 0, 255, 0.1)', // 🔵 DEBUG: Blue background
-                    border: '2px solid rgba(0, 0, 255, 0.3)',
-                    borderRadius: '8px',
-                    padding: `${8 * scaleFactor}px` // 🔥 FIXED: Scale padding
-                  }}
-                >
-                  {hasToken ? (
-                    <div className="relative">
-                      {/* Small semi-transparent value card overlayed on the stack near bottom */}
-                      <div 
-                        className="absolute left-1/2 z-40"
-                        style={{ 
-                          transform: 'translateX(-50%) scale(1)',
-                          bottom: `${16 * scaleFactor}px` // 🔥 FIXED: Scale bottom position
-                        }}
-                      > 
-                        <div 
-                          className="rounded-xl border border-[#FFD700]/60 shadow-sm backdrop-blur-sm"
-                          style={{
-                            background: 'rgba(74, 14, 78, 0.4)',
-                            boxShadow: `
-                              0 0 4px rgba(255, 215, 0, 0.3),
-                              inset 0 0.5px 0 rgba(255, 215, 0, 0.2),
-                              inset 0 -0.5px 0 rgba(0, 0, 0, 0.2)
-                            `,
-                            padding: `${6 * scaleFactor}px ${12 * scaleFactor}px` // 🔥 FIXED: Scale padding
-                          }}
-                        >
-                          <div className="text-center">
-                            <div 
-                              className="font-bold text-[#FFD700] leading-none"
-                              style={{ 
-                                fontFamily: "Visby Round CF, SF Pro Display, sans-serif",
-                                textShadow: "0.5px 0.5px 0 #000000",
-                                fontSize: `${10 * scaleFactor}px` // 🔥 FIXED: Scale font size
-                              }}
-                            >
-                              {formatCurrency(remainingValue)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          transform: `scale(0.5)`,
-                          transformOrigin: 'center bottom'
-                        }}
-                      >
-                        <ChipStack
-                          value={value}
-                          showType="remaining"
-                          sliderValue={remainingValue}
-                          tokenImage={getTokenImage(tokenIndex)}
-                          tokenSymbol={getTokenSymbol(tokenIndex)}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div 
-                      className="text-black/50 text-center"
-                      style={{ fontSize: `${12 * scaleFactor}px` }} // 🔥 FIXED: Scale font size
-                    >
-                      Empty Column {columnNumber}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* 🔥 DEBUG: CONTROLS AREA - PURPLE BACKGROUND */}
-            <div 
-              className="col-span-full"
-              style={{
-                gridRow: 2,
-                gridColumn: `1 / -1`, // Span all columns
-                backgroundColor: 'rgba(128, 0, 128, 0.1)', // 🟣 DEBUG: Purple background
-                border: '2px solid rgba(128, 0, 128, 0.3)',
-                borderRadius: '8px',
-                padding: `${0 * scaleFactor}px` // 🔥 FIXED: Scale padding
-              }}
-            >
-              <TokenControls
-                totalColumns={totalColumns}
-                stackValues={stackValues}
-                filteredTokens={filteredTokens}
-                sliderValues={sliderValues} // Now percentages
-                onSliderChange={onSliderChange}
-                getTokenSymbol={getTokenSymbol}
-                getColumnForToken={getColumnForToken}
-                getDisplayValues={getDisplayValues}
-                tokenPricesInSol={tokenPricesInSol}
-                solPrice={solPrice}
-                shouldCenter={shouldCenter}
-                scaleFactor={scaleFactor} // 🔥 NEW: Pass scale factor to controls
-              />
-            </div>
+            <TokenControls
+              totalColumns={totalColumns}
+              stackValues={stackValues}
+              filteredTokens={filteredTokens}
+              sliderValues={sliderValues} // Now percentages
+              onSliderChange={onSliderChange}
+              getTokenSymbol={getTokenSymbol}
+              getColumnForToken={getColumnForToken}
+              getDisplayValues={getDisplayValues}
+              tokenPricesInSol={tokenPricesInSol}
+              solPrice={solPrice}
+              shouldCenter={shouldCenter}
+              scaleFactor={scaleFactor} // 🔥 NEW: Pass scale factor to controls
+            />
           </div>
         </div>
       </div>
