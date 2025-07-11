@@ -8,6 +8,7 @@ interface SpinningWheelProps {
   isSpinning: boolean;
   finalSpinAngle: number;
   shouldReset?: boolean;
+  solPriceUSD?: number;
 }
 
 export function SpinningWheel({
@@ -16,6 +17,7 @@ export function SpinningWheel({
   isSpinning,
   finalSpinAngle,
   shouldReset = false,
+  solPriceUSD,
 }: SpinningWheelProps) {
   return (
     <div className="relative w-full h-full z-5">
@@ -92,7 +94,7 @@ export function SpinningWheel({
               })}
             </Pie>
 
-            {!isSpinning && <Tooltip content={<CustomTooltip />} />}
+            {!isSpinning && <Tooltip content={<CustomTooltip solPriceUSD={solPriceUSD} />} />}
           </PieChart>
         </ResponsiveContainer>
       </motion.div>

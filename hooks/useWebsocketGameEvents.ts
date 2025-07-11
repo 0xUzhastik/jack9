@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { Deposit } from '@/lib/types'; // Assuming you have this type
 import { useSolPriceUSD } from './useSolPriceUSD';
 import { usePrivy } from '@privy-io/react-auth';
+import { pastGamesCache } from '@/lib/pastGamesCache';
 
 // Define the shape of the incoming WebSocket data based on your examples
 interface GameUpdateData {
@@ -153,14 +154,14 @@ export function useWebSocketGameEvents() {
         prevUserDepositSigsRef.current = newUserDepositSigs;
     }, [setDeposits, setSeconds]);
 
-    const handleGameStarted = (data: GameStartedData) => {
+    const handleGameStarted = useCallback((data: GameStartedData) => {
         console.log(`🎉 New Game Started: #${data.gameId}`);
         toast({ title: `🚀 Round #${data.gameId} has started!`, description: 'Get your deposits in!', duration: 4000 });
         resetRound();
         setRoundState('active');
-    };
+    }, [resetRound, setRoundState]);
 
-    const handleGameClosed = (data: GameClosedData) => {
+    const handleGameClosed = useCallback((data: GameClosedData) => {
         console.log(`🏁 Game Closed: #${data.gameId}, Winner: ${data.winner}`);
         const { winner, totalPotValueSol } = data;
 
@@ -171,6 +172,8 @@ export function useWebSocketGameEvents() {
             // Fallback: just announce winner name and end round without spinning
             setWinner(winner, totalPotValueSol);
             setRoundState('ended');
+            // Refresh past games history when round ends
+            pastGamesCache.refresh();
             return;
         }
 
@@ -180,7 +183,10 @@ export function useWebSocketGameEvents() {
         // Let the existing logic in JackpotDonutChart handle the sequence
         // The component will see `roundState` is 'ending' and start its animation sequence.
         // You've already determined the winner here, so the spin will be for show.
-    };
+        
+        // Refresh past games history when round ends
+        pastGamesCache.refresh();
+    }, [currentRoundDeposits, setWinner, setRoundState]);
 
     useEffect(() => {
         socketBus.on("game_updated", handleGameUpdated);

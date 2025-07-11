@@ -15,6 +15,7 @@ import { SpinningWheel } from './SpinningWheel';
 import { RoundStateDisplay } from './RoundStateDisplay';
 import { useWebSocketGameEvents } from '@/hooks/useWebsocketGameEvents';
 import type { RoundState } from '@/stores/gameStore';
+import { useSolPriceUSD } from '@/hooks/useSolPriceUSD';
 
 // Add TypeScript declaration for window.solana
 declare global {
@@ -66,6 +67,8 @@ export default function JackpotDonutChart() {
     setShouldResetWheel,
     resetRound
   } = useGameStore();
+
+  const { price: solPriceUSD } = useSolPriceUSD();
 
   // 🔥 CRITICAL: Block new deposits during animations
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -274,6 +277,7 @@ export default function JackpotDonutChart() {
             isSpinning={isSpinning}
             finalSpinAngle={finalSpinAngle}
             shouldReset={shouldResetWheel}
+            solPriceUSD={solPriceUSD}
           />
 
           <RoundStateDisplay

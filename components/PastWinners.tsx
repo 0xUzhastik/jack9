@@ -12,6 +12,7 @@ import { pastDraws } from "@/lib/mock-data";
 import { useSolPriceUSD } from '@/hooks/useSolPriceUSD';
 import useSWR from 'swr';
 import { useState } from 'react';
+import { pastGamesCache } from '@/lib/pastGamesCache';
 
 interface PastGame {
   gameId: number;
@@ -82,7 +83,7 @@ export function PastWinners() {
   const { price: solPriceUSD } = useSolPriceUSD();
 
   const { data, error, isLoading } = useSWR<PastGame[]>(
-    'https://webhooks-production-2e4f.up.railway.app/game/games?limit=10&orphan=false',
+    pastGamesCache.getUrl(),
     fetcher,
     { revalidateOnFocus: false }
   );
@@ -114,16 +115,15 @@ export function PastWinners() {
         <div className="mb-2 flex items-center justify-center gap-2">
           <h2 className="text-lg font-black uppercase text-center tracking-wide casino-text-gold truncate"
             style={{ fontFamily: "Visby Round CF, SF Pro Display, sans-serif" }}>
-            Recent Winners
+            Past Games
           </h2>
         </div>
         {/* Table Headers */}
         <div className="grid grid-cols-12 gap-2 px-2 py-1 flex-shrink-0 border-b border-yellow-400/30">
-          <div className="col-span-2 text-xs font-black uppercase casino-text-yellow">Game</div>
-          <div className="col-span-3 text-xs font-black uppercase casino-text-yellow">Winner</div>
+          <div className="col-span-3 text-xs font-black uppercase casino-text-yellow">Game</div>
+          <div className="col-span-4 text-xs font-black uppercase casino-text-yellow">Winner</div>
           <div className="col-span-3 text-xs font-black uppercase casino-text-yellow">Jackpot</div>
-          <div className="col-span-2 text-xs font-black uppercase casino-text-yellow">Date</div>
-          <div className="col-span-2 text-xs font-black uppercase casino-text-yellow">TX</div>
+          <div className="col-span-2 text-xs font-black uppercase casino-text-yellow">Details</div>
         </div>
         {/* Table Body - Scrollable */}
         <div className="flex-1 min-h-0 overflow-y-auto pr-2" style={{ maxHeight: 160 }}>
@@ -140,24 +140,23 @@ export function PastWinners() {
                   style={{ borderRadius: 8 }}
                   onClick={() => handleGameClick(game)}
                 >
-                  <div className="col-span-2 text-xs font-mono casino-text-gold">#{game.gameId}</div>
-                  <div className="col-span-3 text-xs font-mono text-white bg-black/20 px-2 py-1 rounded truncate">{truncateWallet(game.winner)}</div>
-                  <div className="col-span-3 text-xs font-bold casino-text-gold">
-                    {game.totalPotValueSol.toFixed(3)} SOL
+                  <div className="col-span-3 text-xs font-mono casino-text-gold">#{game.gameId}</div>
+                  <div className="col-span-4 text-xs font-mono text-white bg-black/20 px-2 py-1 rounded truncate">{truncateWallet(game.winner)}</div>
+                  <div className="col-span-3 text-xs font-bold casino-text-gold flex flex-col leading-tight">
+                    <span>{game.totalPotValueSol.toFixed(3)} SOL</span>
                     {solPriceUSD && (
-                      <span className="text-green-400 font-semibold ml-1">
-                        (${(game.totalPotValueSol * solPriceUSD).toLocaleString('en-US', { maximumFractionDigits: 0 })})
+                      <span className="text-green-400 font-semibold text-xs" style={{ lineHeight: '1.1' }}>
+                        ${Math.round(game.totalPotValueSol * solPriceUSD).toLocaleString('en-US')}
                       </span>
                     )}
                   </div>
-                  <div className="col-span-2 text-xs text-white/80">{formatDate(game.createdAt)}</div>
                   <div className="col-span-2">
                     <button
-                      onClick={e => handleVerifyWin(game.payoutTxSig || '', e)}
+                      onClick={e => handleGameClick(game)}
                       className="text-xs text-blue-400 hover:underline"
                       style={{ fontFamily: 'Visby Round CF, SF Pro Display, sans-serif' }}
                     >
-                      View TX
+                      View Details
                     </button>
                   </div>
                 </div>

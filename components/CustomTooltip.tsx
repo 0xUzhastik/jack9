@@ -20,9 +20,10 @@ interface CustomTooltipProps {
   payload?: Array<{
     payload: ChartDataItem;
   }>;
+  solPriceUSD?: number;
 }
 
-export function CustomTooltip({ active, payload }: CustomTooltipProps) {
+export function CustomTooltip({ active, payload, solPriceUSD }: CustomTooltipProps) {
   if (!active || !payload || !payload[0]) return null;
   
   const data = payload[0].payload as ChartDataItem;
@@ -52,6 +53,19 @@ export function CustomTooltip({ active, payload }: CustomTooltipProps) {
   const timeString = timeAgo < 60 ? `${timeAgo}s ago` : 
                    timeAgo < 3600 ? `${Math.floor(timeAgo / 60)}m ago` : 
                    `${Math.floor(timeAgo / 3600)}h ago`;
+
+  // Calculate USD value for SOL deposits
+  let usdValue = data.deposit.amount;
+  let showSolLine = false;
+  // For SOL, always calculate USD value from amount * solPriceUSD
+  if (data.deposit.token === 'SOL' && solPriceUSD) {
+    usdValue = data.deposit.amount * solPriceUSD;
+    showSolLine = true;
+  } else if (data.deposit.token === 'SOL' && !solPriceUSD) {
+    // If price not loaded, show 0
+    usdValue = 0;
+    showSolLine = true;
+  }
   
   return (
     <motion.div
@@ -70,12 +84,20 @@ export function CustomTooltip({ active, payload }: CustomTooltipProps) {
         </div>
         
         <div className="text-center border-t border-yellow-400/30 pt-2">
+          {/* Always show USD value on top */}
           <p className="text-gold-400 text-xl font-black" style={{ fontFamily: "Visby Round CF, SF Pro Display, sans-serif" }}>
-            ${data.deposit.amount.toFixed(6)}
+            ${usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="text-yellow-300 text-sm font-bold" style={{ fontFamily: "Visby Round CF, SF Pro Display, sans-serif" }}>
-            {data.deposit.token}
-          </p>
+          {/* For SOL, show SOL amount below. For tokens, show symbol. */}
+          {showSolLine ? (
+            <p className="text-yellow-300 text-sm font-bold" style={{ fontFamily: "Visby Round CF, SF Pro Display, sans-serif" }}>
+              {data.deposit.amount} SOL
+            </p>
+          ) : (
+            <p className="text-yellow-300 text-sm font-bold" style={{ fontFamily: "Visby Round CF, SF Pro Display, sans-serif" }}>
+              {data.deposit.token}
+            </p>
+          )}
         </div>
         
         <div className="border-t border-yellow-400/30 pt-2">
