@@ -80,6 +80,8 @@ export function TokenSelector({
     updateTokenAmount
   } = useTokenStore();
 
+
+
   // Calculate USD values for each token using shared utility
   const tokenUSDValues = useMemo(() => {
     const valuesMap: Record<string, number | null> = {};
@@ -114,6 +116,17 @@ export function TokenSelector({
     ...availableTokens.map(at => ({ ...at, selected: false }))
   ];
 
+
+  // Debug logging for token data, filtered tokens, and related info (all at once)
+    console.log("🔍 [TokenSelector]:", {
+      filteredTokens,
+      allTokens,
+      tokenUSDValues,
+      tokenPricesInSol,
+      solPrice,
+    });
+
+  
   // Use Zustand actions instead of prop-based callbacks
   const select = (token: any) => {
     addToken(token);

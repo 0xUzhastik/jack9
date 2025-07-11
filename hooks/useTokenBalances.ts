@@ -365,5 +365,7 @@ export function useTokenBalances(publicKey: string | undefined) {
     () => fetchBalances(stablePublicKey!),
     { revalidateOnFocus: false }
   );
+
+  console.log('[tokens]', {tokens});
   return { tokens, loading: isLoading, error, mutate };
 }

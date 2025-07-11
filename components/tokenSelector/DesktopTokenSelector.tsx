@@ -252,6 +252,16 @@ export function DesktopTokenSelector({
     }
   };
 
+  // Debug log: tokens, filteredTokens, totalSelectedUSD, selectedTokens, etc.
+    console.log("[DesktopTokenSelector]", {
+      tokens,
+      filteredTokens,
+      selectedTokens,
+      totalSelectedUSD,
+      tokenPricesInSol,
+      solPrice,
+    });
+
   /* ------------------------------ Loading / error -------------------------- */
   if (loading) {
     return (
