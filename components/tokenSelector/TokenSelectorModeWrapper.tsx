@@ -65,6 +65,8 @@ export function TokenSelectorModeWrapper({ mutateTokenBalances }: TokenSelectorM
     return filtered;
   }, [tokens, dexScreenerData, isUsingDebugWallet, tokenPricesInSol, solPrice, tokenSelectorMode]);
 
+  console.log("🔧 [TokenSelectorModeWrapper]: filteredTokens", {filteredTokens});
+
   // Show connect wallet state (only if not using debug mode)
   if (!authenticated && !isUsingDebugWallet) {
     return (
